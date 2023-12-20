@@ -1,0 +1,71 @@
+/* Reset some default styles */
+body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+/* Header styles */
+header {
+    background-color: #232f3e;
+    color: #fff;
+    padding: 10px;
+}
+
+header h1 {
+    font-size: 24px;
+}
+
+nav ul {
+    list-style: none;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 20px;
+}
+
+nav a {
+    text-decoration: none;
+    color: #fff;
+}
+
+/* Product card styles */
+.product-card {
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    margin: 10px;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.product-card img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Login form styles */
+.login-form {
+    margin: 20px;
+}
+
+.login-form label, .login-form input {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.featured-products {
+    display: inline-block;
+    width: 450px;
+    vertical-align: top;
+}
+
+.productView {
+    width: 300px;
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 15px;
+}
