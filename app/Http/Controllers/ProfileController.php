@@ -6,41 +6,28 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+
 class ProfileController extends Controller
 {
-    public function showProfile()
+
+    public function changePasswordAPI(Request $request)
     {
-        $user = auth()->user();
-
-        return view('profile', compact('user'));
-
-    }
-
-    public function changePassword(Request $request)
-    {
-        $user = Auth::user();
-
+        // Validate request
         $request->validate([
+            'user_id' => 'required',
             'passwordOld' => 'required',
-            'passwordNew1' => 'required|min:1',
-            'passwordNew2' => 'required|min:1|same:passwordNew1'
+            'passwordNew' => 'required|min:1',
         ]);
 
+        $user = User::find($request->user_id);
 
-        if (!Hash::check($request->passwordOld, $user->password)) {
-
-            return back()->withErrors(['passwordOld' => 'The provided password does not match our records.']);
+        if (!$user || !Hash::check($request->passwordOld, $user->password)) {
+            return response()->json(['success' => false, 'message' => 'Invalid current password'], 401);
         }
 
-        if ($request->passwordNew1 !== $request->passwordNew2) {
-
-            return back()->withErrors(['passwordNew1' => 'The new passwords do not match.']);
-        }
-
-        $user->password = Hash::make($request->passwordNew1);
+        $user->password = Hash::make($request->passwordNew);
         $user->save();
 
-
-        return redirect(route('index'))->with('success', 'Password changed successfully');
+        return response()->json(['success' => true, 'message' => 'Password changed successfully'], 200);
     }
 }

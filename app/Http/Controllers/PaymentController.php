@@ -3,46 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cart;
+use App\Models\User;
 use \Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class PaymentController extends Controller
 {
-    public function checkoutPage ()
+
+    public function checkoutPagePostAPI(Request $request, $userId)
     {
-        return view('CheckoutPage');
-    }
-
-    public function indexCheckoutPage()
-    {
-        if (!auth()->check()) {
-            return redirect()->route('login');
-        }
-
-        $user = auth()->user();
-
-        // Fetch the cart for the authenticated user
-        $cart = Cart::with('products')->find($user->cart_id);
-
-        if (!$cart) {
-            // Handle the case where the cart doesn't exist
-            return view('cart')->with('cartItems', []);
-        }
-
-        // Retrieve products and their quantities from the pivot table
-        $cartItems = $cart->products->map(function ($product) {
-            return [
-                'product' => $product,
-                'quantity' => $product->pivot->quantity
-            ];
-        });
-
-        // Pass the cart items to the view
-        return view('checkoutPage', compact('cartItems'));
-    }
-
-    public function checkoutPagePost(Request $request)
-    {
-        $request->validate([
+        // Validate the request
+        $validator = Validator::make($request->all(), [
             'firstName' => 'required|min:1',
             'lastName' => 'required|min:1',
             'address' => 'required|min:1',
@@ -51,37 +22,33 @@ class PaymentController extends Controller
             'phone' => 'required|numeric',
         ]);
 
-        if (!auth()->check()) {
-            return redirect()->route('login');
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 400);
         }
 
-        $user = auth()->user();
+        // Fetch the user by ID
+        $user = User::find($userId);
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'User not found.'], 404);
+        }
 
-        // Fetch the cart for the authenticated user
+        // Fetch the user's cart
         $cart = Cart::with('products')->find($user->cart_id);
-
-        if (!$cart) {
-            // Handle the case where the cart doesn't exist
-            return view('cart')->with('cartItems', []);
+        if (!$cart || $cart->products->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No cart found for this user.'], 404);
         }
 
         foreach ($cart->products as $product) {
-            // Here you subtract the amount bought from the product's quantity
             $boughtQuantity = $product->pivot->quantity;
             $product->quantity -= $boughtQuantity;
-
-            // Save the updated product quantity
             $product->save();
         }
-
 
         // Clear the items in the cart
         $cart->products()->detach();
 
-        // Persist the changes to the database
-         $cart->save();
-
-        return redirect(route('paymentComplete'))->with('success', 'Payment success');
+        // Return a success message with a success key
+        return response()->json(['success' => true, 'message' => 'Payment success.'], 200);
     }
 
 

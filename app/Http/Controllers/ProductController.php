@@ -3,112 +3,76 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+
+//use http\Client\Curl\User;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
 
-    public function deleteProduct(Request $request){
-        $productId = $request->input('product_id');
-        if(auth()->user()->admin){
+    public function indexAPI()
+    {
+        $seconds = 3600; // Cache duration
 
-            // Find the product by ID
-            $product = Product::find($productId);
+        $products = Cache::remember('products_list', $seconds, function () {
+            return Product::all();
+        });
 
-            if ($product) {
-                // Delete the product
-                $product->delete();
-
-                // Redirect or return a response
-                return redirect()->route('index')->with('success', 'Product deleted successfully.');
-            } else {
-                // Handle the case where the product does not exist
-                return redirect()->back()->with('error', 'Product not found.');
-            }
-
-        }else{
-            return redirect()->back()->with('error', 'Product not found.');
-        }
-
+        // Pass the products to the view
+        return response()->json($products);
     }
 
-    public function productPage(Request $request)
+
+    public function getProductsByIdAPI($id)
     {
-        $productId = $request->input('product_id');
+        $seconds = 3600; // Cache duration
+
+        $product = Cache::remember("product_{$id}", $seconds, function () use ($id) {
+            return Product::find($id);
+        });
+
+        return response()->json($product);
+    }
+
+
+    public function addProductDBAPI(Request $request)
+    {
+
+        $data = $request->only([
+            'name', 'price', 'quantity', 'product_info1', 'product_info2', 'product_info3', 'product_info4', 'description', 'image'
+        ]);
+
+
+        // Create a new Product instance and fill it with data
+        $product = new Product($data);
+        $product->save();
+
+        // Invalidate cache
+        Cache::forget('products_list');
+
+        return response()->json(['success' => true, 'message' => 'Product added successfully', 'product' => $product], 201);
+    }
+
+
+    public function deleteProductAPI($id)
+    {
+        $productId = $id;
 
         $product = Product::find($productId);
+        if ($product) {
+            $product->delete();
 
-        // Check if product exists
-        if (!$product) {
-            return redirect()->back()->withErrors('Product not found.');
+            // Invalidate caches
+            Cache::forget('products_list');
+            Cache::forget("product_{$productId}");
+
+            return response()->json(['success' => true, 'message' => 'Product deleted successfully'], 200);
         }
 
-
-
-        return view('productPage', compact('product'));
-
-
+        return response()->json(['failed' => false, 'message' => 'Product not found'], 404);
     }
-
-    public function index()
-    {
-        // Fetch products from the database
-        $products = Product::all();
-
-        // Pass the products to the view
-        return view('index', compact('products'));
-    }
-
-    public function indexProducts()
-    {
-        // Fetch products from the database
-        $products = Product::all();
-
-        // Pass the products to the view
-        return view('productsCatalog', compact('products'));
-    }
-
-    public function productPageAdmin(){
-        return view('productPageAdmin');
-    }
-
-    public function addProductDB(Request $request){
-        // Retrieve product data from the request
-        $data = $request->only([
-            'name', 'price', 'qty', 'storage', 'CPU', 'RAM', 'SSD', 'Desc', 'Image'
-        ]);
-        if(auth()->user()->admin){
-
-            // Create a new Product instance and fill it with data
-            $product = new Product();
-            $product->name = $data['name'];
-            $product->price = $data['price'];
-            $product->description = $data['Desc'];
-            $product->quantity = $data['qty'];
-            $product->product_info1 = $data['storage'];
-            $product->product_info2 = $data['CPU'];
-            $product->product_info3 = $data['RAM'];
-            $product->product_info4 = $data['SSD'];
-            $product->image = $data['Image'];
-
-            // Save the product
-            $product->save();
-
-            // Redirect or return a response
-            return redirect()->route('index');
-
-        }else {
-            return redirect()->back()->with('error', 'not admin user.');
-        }
-
-
-    }
-
-
-
-
-
-
 
 
 }
